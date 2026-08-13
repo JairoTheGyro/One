@@ -20,6 +20,7 @@ interface DashboardState {
   createSession: (agentId: string) => string;
   setActiveSession: (sessionId: string) => void;
   addMessage: (sessionId: string, message: ChatMessage) => void;
+  updateMessage: (sessionId: string, messageId: string, content: string) => void;
   setSending: (isSending: boolean) => void;
 }
 
@@ -53,6 +54,20 @@ export const useDashboardStore = create<DashboardState>((set) => ({
     set((state) => ({
       sessions: state.sessions.map((s) =>
         s.id === sessionId ? { ...s, messages: [...s.messages, message] } : s
+      ),
+    })),
+
+  updateMessage: (sessionId, messageId, content) =>
+    set((state) => ({
+      sessions: state.sessions.map((s) =>
+        s.id === sessionId
+          ? {
+              ...s,
+              messages: s.messages.map((m) =>
+                m.id === messageId ? { ...m, content } : m
+              ),
+            }
+          : s
       ),
     })),
 

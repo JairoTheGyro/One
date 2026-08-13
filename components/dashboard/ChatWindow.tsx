@@ -11,6 +11,7 @@ export function ChatWindow() {
   const activeSessionId = useDashboardStore((s) => s.activeSessionId);
   const sessions = useDashboardStore((s) => s.sessions);
   const addMessage = useDashboardStore((s) => s.addMessage);
+  const updateMessage = useDashboardStore((s) => s.updateMessage);
   const isSending = useDashboardStore((s) => s.isSending);
   const setSending = useDashboardStore((s) => s.setSending);
   const createSession = useDashboardStore((s) => s.createSession);
@@ -36,8 +37,16 @@ export function ChatWindow() {
     setInput("");
     setSending(true);
 
+    const assistantMessageId = nanoid();
+    addMessage(sessionId, {
+      id: assistantMessageId,
+      role: "assistant",
+      content: "",
+      createdAt: Date.now(),
+    });
+
     try {
-      const res = await fetch("/api/chat", {
+      const res = await fetch("/api/chat/stream", {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({
@@ -45,8 +54,36 @@ export function ChatWindow() {
           messages: [...(session?.messages ?? []), userMessage],
         }),
       });
-      const data = await res.json();
-      if (data.reply) addMessage(sessionId, data.reply);
+
+      if (!res.body) throw new Error("No response stream");
+
+      const reader = res.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = "";
+      let full = "";
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buffer += decoder.decode(value, { stream: true });
+
+        let separatorIndex;
+        while ((separatorIndex = buffer.indexOf("\n\n")) >= 0) {
+          const rawEvent = buffer.slice(0, separatorIndex);
+          buffer = buffer.slice(separatorIndex + 2);
+
+          const dataLine = rawEvent.split("\n").find((line) => line.startsWith("data:"));
+          if (!dataLine) continue;
+
+          const event = JSON.parse(dataLine.slice(5).trim());
+          if (event.type === "chunk") {
+            full += event.delta;
+            updateMessage(sessionId, assistantMessageId, full);
+          } else if (event.type === "error") {
+            updateMessage(sessionId, assistantMessageId, `Error: ${event.error}`);
+          }
+        }
+      }
     } finally {
       setSending(false);
     }
@@ -69,14 +106,9 @@ export function ChatWindow() {
                   : "mr-auto max-w-lg rounded-2xl bg-panel px-4 py-2 text-sm text-foreground"
               }
             >
-              {message.content}
+              {message.content || (isSending ? "…" : "")}
             </div>
           ))
-        )}
-        {isSending && (
-          <div className="mr-auto max-w-lg rounded-2xl bg-panel px-4 py-2 text-sm text-foreground/50">
-            Thinking...
-          </div>
         )}
       </div>
 
