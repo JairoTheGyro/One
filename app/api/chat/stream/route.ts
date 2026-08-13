@@ -5,6 +5,7 @@ import { ChatMessage } from "@/lib/models/types";
 
 interface StreamRequestBody {
   agentId: string;
+  modelId?: string;
   messages: ChatMessage[];
 }
 
@@ -33,11 +34,13 @@ export async function POST(req: NextRequest) {
     createdAt: Date.now(),
   };
 
+  const modelId = body.modelId ?? agent.modelId;
+
   const encoder = new TextEncoder();
   const stream = new ReadableStream({
     async start(controller) {
       try {
-        for await (const chunk of generateStream(agent.modelId, [
+        for await (const chunk of generateStream(modelId, [
           systemMessage,
           ...body.messages,
         ])) {
