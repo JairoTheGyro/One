@@ -118,6 +118,10 @@ body {
 @font-face { font-family: 'OpenDyslexic'; font-weight: 400; font-style: normal; font-display: swap; src: url('/static/fonts/OpenDyslexic-Regular.woff2') format('woff2'); }
 @font-face { font-family: 'OpenDyslexic'; font-weight: 700; font-style: normal; font-display: swap; src: url('/static/fonts/OpenDyslexic-Bold.woff2') format('woff2'); }
 
+/* Self-hosted VT323 + Press Start 2P — pixel/CRT fonts for the "Temple" theme (SIL OFL 1.1) */
+@font-face { font-family: 'VT323'; font-weight: 400; font-style: normal; font-display: swap; src: url('/static/fonts/VT323-Regular.woff2') format('woff2'); }
+@font-face { font-family: 'Press Start 2P'; font-weight: 400; font-style: normal; font-display: swap; src: url('/static/fonts/PressStart2P-Regular.woff2') format('woff2'); }
+
 /* Code block baseline */
 pre, code, .hljs {
   font-size: 0.95em;
@@ -41398,4 +41402,103 @@ body.settings-sidebar-resize-active {
   .settings-sidebar-toggle {
     display: none;
   }
+}
+
+/* ════════════════════════════════════════════════════════════════════
+   "Temple" theme — a personal, opt-in retro/CRT theme (Theme picker).
+   Scoped entirely under html.theme-temple so no other theme is touched.
+   Flattens rounded corners, adds chunky beveled (Windows-3.1-style)
+   borders on interactive chrome, a subtle scanline overlay, and a
+   rainbow-cycling brand wordmark. Colors/fonts come from theme.js
+   (THEMES.temple + FONT_MAP.temple); this block is the structural/
+   texture layer that CSS variables alone can't express.
+   ════════════════════════════════════════════════════════════════════ */
+
+html.theme-temple, html.theme-temple body {
+  --font-family: 'VT323', 'Fira Code', monospace;
+}
+
+/* Flatten every rounded corner app-wide — the single broadest, safest
+   lever for a "blocky" retro feel across 40k+ lines of component CSS. */
+html.theme-temple, html.theme-temple * {
+  border-radius: 0 !important;
+}
+
+/* Bigger, blockier base type — VT323 renders small, so compensate. */
+html.theme-temple body {
+  font-size: 17px;
+  letter-spacing: 0.2px;
+}
+
+/* Chunky beveled "outset" borders on primary chrome, evoking classic
+   16-color GUI window/button styling. Kept to a handful of broad,
+   well-known selectors rather than fighting every component. */
+html.theme-temple .sidebar,
+html.theme-temple .modal-content,
+html.theme-temple #theme-popup,
+html.theme-temple .settings-modal-content {
+  border: 2px solid var(--border) !important;
+  box-shadow:
+    inset 1px 1px 0 color-mix(in srgb, var(--fg) 45%, transparent),
+    inset -2px -2px 0 color-mix(in srgb, black 55%, transparent) !important;
+}
+
+html.theme-temple button,
+html.theme-temple .btn,
+html.theme-temple input[type="text"],
+html.theme-temple input[type="password"],
+html.theme-temple input[type="search"],
+html.theme-temple textarea,
+html.theme-temple select {
+  border: 2px solid var(--border) !important;
+  box-shadow:
+    inset 1px 1px 0 color-mix(in srgb, var(--fg) 35%, transparent),
+    inset -1px -1px 0 color-mix(in srgb, black 45%, transparent) !important;
+}
+
+html.theme-temple button:active {
+  box-shadow:
+    inset -1px -1px 0 color-mix(in srgb, var(--fg) 35%, transparent),
+    inset 1px 1px 0 color-mix(in srgb, black 45%, transparent) !important;
+}
+
+/* Chat bubbles get the same chunky border instead of soft rounded cards. */
+html.theme-temple .msg {
+  border: 2px solid var(--border) !important;
+}
+
+/* Rainbow-cycling brand wordmark — a nod to the scrolling rainbow text
+   TempleOS is known for. Subtle: hue-rotate only, no layout shift. */
+html.theme-temple .sidebar-brand-title {
+  font-family: 'Press Start 2P', 'VT323', monospace;
+  font-size: 0.62rem;
+  letter-spacing: 0.5px;
+  animation: temple-rainbow 6s linear infinite;
+}
+@keyframes temple-rainbow {
+  0%   { filter: hue-rotate(0deg); }
+  100% { filter: hue-rotate(360deg); }
+}
+
+/* CRT scanline overlay — fixed, non-interactive, low-opacity so text
+   underneath stays fully legible. */
+html.theme-temple body::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: 99999;
+  pointer-events: none;
+  background: repeating-linear-gradient(
+    to bottom,
+    rgba(0, 0, 0, 0.16) 0px,
+    rgba(0, 0, 0, 0.16) 1px,
+    transparent 1px,
+    transparent 3px
+  );
+  mix-blend-mode: multiply;
+  opacity: 0.55;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html.theme-temple .sidebar-brand-title { animation: none; }
 }

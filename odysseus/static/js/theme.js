@@ -29,6 +29,14 @@ export const THEMES = {
                             inputBg: '#2f2f2f', brandColor: '#ffffff', brandMixTo: '#ffffff' } },
   claude:     { bg:'#262624', fg:'#f5f4f0', panel:'#30302e', border:'#4a4a47', red:'#c6613f' },
   cute:       { bg:'#fff0f5', fg:'#d4608a', panel:'#fff8fa', border:'#f0c0d0', red:'#ff6b9d' },
+  // "Temple" — a personal, opt-in retro/CRT theme (classic 16-color DOS
+  // blue desktop). The blocky font, flat corners, beveled chrome, and
+  // scanline overlay live in static/style.css under html.theme-temple;
+  // this palette just supplies the color half.
+  temple:     { bg:'#0000aa', fg:'#55ffff', panel:'#000000', border:'#ffff55', red:'#ff5555',
+                advanced: { sendBtnBg: '#ff5555', sendBtnHover: '#ff8888',
+                            userBubbleBg: '#000000', aiBubbleBg: '#0000aa',
+                            inputBg: '#000000', brandColor: '#ffff55', brandMixTo: '#55ffff' } },
 };
 
 const DEFAULT_THEME = 'dark';
@@ -40,6 +48,7 @@ const FONT_MAP = {
   sans: "system-ui, -apple-system, 'Segoe UI', sans-serif",
   serif: "Georgia, 'Times New Roman', serif",
   opendyslexic: "'OpenDyslexic', sans-serif",
+  temple: "'VT323', 'Fira Code', monospace",
 };
 const DEFAULT_FONT = 'mono';
 const DEFAULT_DENSITY = 'comfortable';
@@ -59,6 +68,7 @@ const THEME_DEFAULT_PATTERN = {
   organs:     'rain',
   ume:        'petals',
   cute:       'sparkles',
+  temple:     'none',
 };
 
 // Default effect colors for specific themes (overrides --fg)
@@ -433,6 +443,15 @@ export function applyFrostedGlass(on) {
   document.body.classList.toggle('theme-frosted', !!on);
 }
 
+/** Toggle the "Temple" theme's structural CSS (flat corners, beveled
+ *  chrome, scanlines — see the html.theme-temple block in style.css).
+ *  Lives on <html> rather than <body> so it matches the pre-body-parse
+ *  toggle in index.html's early-boot script (same reasoning as that
+ *  script using document.documentElement). */
+export function applyTempleClass(themeName) {
+  document.documentElement.classList.toggle('theme-temple', themeName === 'temple');
+}
+
 // Read current size multiplier for JS effects (canvas-based).
 function _getEffectSize() {
   const v = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--bg-effect-size'));
@@ -705,6 +724,7 @@ export function initThemeUI() {
         const colors = sw.dataset.custom ? customThemes[name] : THEMES[name];
         if (!colors) return;
         applyColors(colors);
+        applyTempleClass(name);
         clearAllActive();
         sw.classList.add('active');
         syncPickers(colors);
@@ -756,6 +776,7 @@ export function initThemeUI() {
   // Init color pickers from current theme and apply syntax colors
   const currentColors = saved ? saved.colors : THEMES[DEFAULT_THEME];
   applyColors(currentColors);
+  applyTempleClass(activeName);
   syncPickers(currentColors);
 
   // Reference colors for per-picker reset (the theme you started from)
@@ -937,6 +958,7 @@ export function initThemeUI() {
       Storage.remove(LS_KEY);
       const colors = THEMES[DEFAULT_THEME];
       applyColors(colors);
+      applyTempleClass(DEFAULT_THEME);
       syncPickers(colors);
       applyFontDensity(DEFAULT_FONT, DEFAULT_DENSITY);
       applyBgPattern('none');

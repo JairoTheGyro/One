@@ -19,6 +19,10 @@
   (function(){
     try {
       var t = JSON.parse(localStorage.getItem('odysseus-theme'));
+      // Toggle the "Temple" theme's structural CSS class before first paint
+      // (flat corners / beveled chrome / scanlines — see style.css). Lives
+      // on <html> since <body> doesn't exist yet this early in <head>.
+      if (t && t.name === 'temple') document.documentElement.classList.add('theme-temple');
       if (t && t.colors) {
         var s = document.documentElement.style;
         var c = t.colors;
@@ -77,7 +81,7 @@
       }
       // Apply font early
       if (t && t.font) {
-        var fm = {mono:"'Fira Code', monospace",sans:"system-ui, -apple-system, 'Segoe UI', sans-serif",serif:"Georgia, 'Times New Roman', serif",opendyslexic:"'OpenDyslexic', sans-serif"};
+        var fm = {mono:"'Fira Code', monospace",sans:"system-ui, -apple-system, 'Segoe UI', sans-serif",serif:"Georgia, 'Times New Roman', serif",opendyslexic:"'OpenDyslexic', sans-serif",temple:"'VT323', 'Fira Code', monospace"};
         if (fm[t.font]) { s.setProperty('--font-family', fm[t.font]); }
         else { s.setProperty('--font-family', "'" + t.font.replace(/'/g,'') + "', sans-serif"); }
       }
