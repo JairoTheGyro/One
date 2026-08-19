@@ -47,7 +47,12 @@ python setup.py
 python -m uvicorn app:app --host 127.0.0.1 --port 7000
 ```
 Requirements: Python 3.11+. Cookbook also needs `tmux` for background model
-downloads and serves. The app itself is lightweight; local model serving is the
+downloads and serves. High-fidelity Office export/import (Documents ->
+Export -> Word/PDF/OpenDocument) needs LibreOffice on PATH as `soffice`
+(`apt install libreoffice` / `brew install libreoffice` / `dnf install
+libreoffice`) — optional, the app falls back to its client-side exporters
+without it. The Docker image installs it automatically. The app itself is
+lightweight; local model serving is the
 heavy part and depends on the model, runtime, GPU, and VRAM, so small hosts can
 connect to API or remote model servers instead. Use `--host 0.0.0.0` only when you intentionally want LAN/reverse-proxy access.
 
