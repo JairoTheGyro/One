@@ -20,6 +20,12 @@ FROM python:3.14-slim
 # chromium provides the actual browser binary used by that MCP server.
 # gosu lets the entrypoint drop privileges cleanly so signals still reach
 # uvicorn directly (no extra shell layer like `su`/`sudo` would add).
+# libreoffice powers src/libreoffice_engine.py: real .docx/.odt/.pdf export
+# from the Documents editor, and a text-extraction fallback for uploaded
+# Office files (legacy .doc/.ppt/.xls plus .pptx/.xlsx/.epub when markitdown
+# is unavailable). It's a large package (several hundred MB); the app
+# degrades gracefully to the pre-existing client-side exporters if it's ever
+# stripped out of a custom image.
 RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential \
     cmake \
@@ -35,6 +41,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libglib2.0-0t64 \
     libxcb1 \
     libmagic1 \
+    libreoffice \
     && rm -rf /var/lib/apt/lists/*
 
 # libgl1/libglib2.0-0t64/libxcb1 are runtime shared libs (libGL.so.1,

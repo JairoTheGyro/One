@@ -78,9 +78,12 @@ def convert_to_markdown(path: str) -> str | None:
     Returns the extracted Markdown, or ``None`` if markitdown is unavailable or
     the conversion fails — callers degrade gracefully rather than erroring.
 
-    Fallback: when markitdown isn't installed and the file is a .docx, run
-    the bundled pure-Python extractor so the most common case (Word docs)
-    works out of the box. Other Office/EPUB formats still need markitdown.
+    Fallback chain when markitdown is unavailable or fails:
+    1. For .docx, the bundled pure-Python extractor (no external deps).
+    2. LibreOffice (`soffice --convert-to txt`), when installed — covers
+       .pptx/.xlsx/.epub too, plus legacy .doc/.ppt/.xls that markitdown
+       handles unevenly. Plain text, so it loses table/list structure that
+       markitdown's Markdown output keeps, but beats returning nothing.
     """
     try:
         markitdown_cls = load_markitdown()
@@ -93,6 +96,9 @@ def convert_to_markdown(path: str) -> str | None:
                     path,
                 )
                 return text
+        text = _extract_via_libreoffice(path)
+        if text:
+            return text
         logger.warning("markitdown not installed; cannot extract %s", path)
         return None
     try:
@@ -100,7 +106,19 @@ def convert_to_markdown(path: str) -> str | None:
         text = getattr(result, "text_content", None)
         if text is None:
             text = getattr(result, "markdown", None)
-        return text
+        if text and text.strip():
+            return text
     except Exception as e:
         logger.warning("markitdown failed to convert %s: %s", path, e)
+    return _extract_via_libreoffice(path)
+
+
+def _extract_via_libreoffice(path: str) -> str | None:
+    from src.libreoffice_engine import convert_file_to_text_sync, soffice_available
+
+    if not soffice_available():
         return None
+    text = convert_file_to_text_sync(path)
+    if text:
+        logger.info("Extracted %s via LibreOffice fallback", path)
+    return text

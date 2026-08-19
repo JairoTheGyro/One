@@ -1610,6 +1610,66 @@ def setup_document_routes(session_manager, upload_handler=None) -> APIRouter:
         finally:
             db.close()
 
+    # ---- GET /api/document/{doc_id}/export-office ----
+    @router.get("/api/document/{doc_id}/export-office")
+    async def export_office(doc_id: str, request: Request, fmt: str = Query("docx", pattern="^(docx|odt|pdf)$")):
+        """Render the document to a real .docx/.odt/.pdf via LibreOffice.
+
+        Higher-fidelity alternative to the client-side docx.js/html2pdf
+        exporters: markdown is converted to HTML server-side, then handed to
+        headless LibreOffice, which preserves tables, nested lists, and
+        proper (non-rasterized, selectable-text) PDF output.
+        """
+        from fastapi.responses import Response
+        from src.libreoffice_engine import convert_html_to_office, soffice_available, LIBREOFFICE_MISSING
+
+        if not soffice_available():
+            raise HTTPException(503, LIBREOFFICE_MISSING)
+
+        user = get_current_user(request)
+        db = SessionLocal()
+        try:
+            doc = db.query(Document).filter(Document.id == doc_id).first()
+            if not doc:
+                raise HTTPException(404, "Document not found")
+            _verify_doc_owner(db, doc, user)
+            content = doc.current_content or ""
+            title = doc.title or "document"
+            language = doc.language
+        finally:
+            db.close()
+
+        if language == "html":
+            body_html = content
+        elif language in (None, "markdown", "email"):
+            import markdown as _markdown
+            import nh3 as _nh3
+            body_html = _nh3.clean(
+                _markdown.markdown(content, extensions=["extra", "tables", "sane_lists"])
+            )
+        else:
+            # Code/plain-text documents: preserve whitespace, don't try to
+            # interpret the content as markdown.
+            import html as _html_mod
+            body_html = f"<pre>{_html_mod.escape(content)}</pre>"
+
+        try:
+            file_bytes = await convert_html_to_office(body_html, title, fmt)
+        except RuntimeError as e:
+            raise HTTPException(502, str(e))
+
+        media_types = {
+            "docx": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+            "odt": "application/vnd.oasis.opendocument.text",
+            "pdf": "application/pdf",
+        }
+        filename = f"{_slug(title)}.{fmt}"
+        return Response(
+            content=file_bytes,
+            media_type=media_types[fmt],
+            headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+        )
+
     # ---- POST /api/document/{doc_id}/prepare-signed-reply ----
     @router.post("/api/document/{doc_id}/prepare-signed-reply")
     async def prepare_signed_reply(doc_id: str, request: Request):

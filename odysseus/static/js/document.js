@@ -9661,7 +9661,10 @@ import { bindMenuDismiss, dismissOrRemove } from './escMenuStack.js';
     options.push(
       { label: 'Export Markdown', fn: exportDocument },
       { label: 'Print as PDF', fn: exportAsPdf },
-      { label: 'Export as Word', fn: exportAsDocx },
+      { label: 'Export as Word', fn: exportAsDocx, _divider: true },
+      { label: 'Word (.docx) — LibreOffice', fn: () => _exportViaLibreOffice('docx') },
+      { label: 'PDF — LibreOffice', fn: () => _exportViaLibreOffice('pdf') },
+      { label: 'OpenDocument (.odt)', fn: () => _exportViaLibreOffice('odt') },
     );
 
     options.forEach(opt => {
@@ -9800,6 +9803,35 @@ import { bindMenuDismiss, dismissOrRemove } from './escMenuStack.js';
     a.click();
     URL.revokeObjectURL(a.href);
     if (uiModule) uiModule.showToast('Exported as DOCX');
+  }
+
+  // High-fidelity export via the server-side LibreOffice engine (real
+  // tables/lists/formatting, and true selectable-text PDFs, unlike the
+  // client-side docx.js/html2pdf paths above). Requires the container's
+  // `soffice` binary — 503s with a plain-language message when absent.
+  async function _exportViaLibreOffice(fmt) {
+    if (!activeDocId) return;
+    if (uiModule) uiModule.showToast('Rendering ' + fmt.toUpperCase() + '…');
+    try {
+      const r = await fetch(`${API_BASE}/api/document/${activeDocId}/export-office?fmt=${fmt}`, {
+        credentials: 'same-origin',
+      });
+      if (!r.ok) {
+        const body = await r.json().catch(() => null);
+        throw new Error((body && body.detail) || `Export failed (${r.status})`);
+      }
+      const blob = await r.blob();
+      const baseName = _getExportBaseName();
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = baseName + '.' + fmt;
+      a.click();
+      URL.revokeObjectURL(a.href);
+      if (uiModule) uiModule.showToast('Exported as ' + fmt.toUpperCase());
+    } catch (e) {
+      console.error('LibreOffice export failed:', e);
+      if (uiModule) uiModule.showError(e.message || 'Export failed');
+    }
   }
 
   /** Delete the active document */
